@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身计划打字机 (Gym Cards)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GYM CARD TYPEWRITER</h1>
+            <div class="settings-toggle">⚙️ 设置</div>
+        </header>
+
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content paper-texture">
+                <span class="close-modal">&times;</span>
+                <h2>系统设置</h2>
+                <div class="form-group">
+                    <label for="api-key">Google Gemini API Key:</label>
+                    <input type="password" id="api-key" placeholder="输入您的 API Key">
+                    <p class="hint">您的 Key 仅保存在本地浏览器缓存中。<a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #666; text-decoration: underline;">获取 Key</a></p>
+                </div>
+                <div class="form-group">
+                    <label for="api-model">选择模型 (Model):</label>
+                    <select id="api-model">
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (推荐)</option>
+                        <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                        <option value="custom">自定义模型 (Custom)</option>
+                    </select>
+                    <input type="text" id="custom-model-input" class="hidden" placeholder="输入模型名称" style="margin-top: 10px;">
+                    <p class="hint">如果遇到配额限制 (Quota Exceeded)，请尝试切换模型。</p>
+                    <p class="hint" style="color: #d32f2f; font-size: 0.8rem; margin-top: 5px;">注意：API Key 的配额与 AI Studio 网页版是分开计算的。Experimental 模型 (如 Latest) 通常配额较低。</p>
+                </div>
+                <button id="save-settings" class="btn-primary">保存设置</button>
+            </div>
+        </div>
+
+        <main>
+            <section class="input-section paper-texture">
+                <h2>> 输入个人信息_</h2>
+                <form id="gym-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>性别:</label>
+                            <select id="gender" required>
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>身高 (cm):</label>
+                            <input type="number" id="height" required>
+                        </div>
+                        <div class="form-group">
+                            <label>体重 (kg):</label>
+                            <input type="number" id="weight" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>体型描述:</label>
+                        <select id="body-type" required>
+                            <option value="偏瘦">偏瘦</option>
+                            <option value="正常">正常</option>
+                            <option value="偏胖">偏胖</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>训练经验:</label>
+                        <input type="text" id="experience" placeholder="例如：可做10个俯卧撑/0个引体" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>现有器械:</label>
+                        <input type="text" id="equipment" placeholder="例如：无器械 / 只有瑜伽垫 / 有哑铃" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>目标:</label>
+                        <input type="text" id="goal" placeholder="例如：胸肌变厚、腹肌更饱满" required>
+                    </div>
+
+                    <div class="actions">
+                        <button type="submit" class="btn-primary" id="generate-btn">生成计划 [ENTER]</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="output-section">
+                <div id="card-preview" class="paper-sheet">
+                    <div class="paper-header">
+                        <span class="timestamp" id="current-date"></span>
+                        <span class="sheet-title">PERSONAL GYM PLAN</span>
+                    </div>
+                    <div id="typewriter-output" class="typewriter-content">
+                        <span id="output-text"></span><span class="cursor">█</span>
+                    </div>
+                    <div class="paper-footer">
+                        Generated by AI Typewriter
+                    </div>
+                </div>
+                
+                <div class="output-actions hidden" id="output-actions">
+                    <button id="download-btn" class="btn-secondary">导出 PNG</button>
+                    <button id="copy-btn" class="btn-secondary">一键复制</button>
+                    <button id="top-btn" class="btn-secondary">回到顶部</button>
+                    <button id="clear-btn" class="btn-secondary">清除重置</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
