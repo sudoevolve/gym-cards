@@ -11,10 +11,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p class="loading-text">正在生成您的专属计划...</p>
+    </div>
+
     <div class="container">
+
         <header>
             <h1>GYM CARD TYPEWRITER</h1>
-            <div class="settings-toggle">⚙️ 设置</div>
+            <div class="settings-toggle" title="设置">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
         </header>
 
         <div id="settings-modal" class="modal hidden">
@@ -25,16 +37,6 @@
                     <label for="api-key">Google Gemini API Key:</label>
                     <input type="password" id="api-key" placeholder="输入您的 API Key">
                     <p class="hint">您的 Key 仅保存在本地浏览器缓存中。<a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #666; text-decoration: underline;">获取 Key</a></p>
-                </div>
-                <div class="form-group">
-                    <label for="api-style">选择风格 (Style):</label>
-                    <select id="api-style">
-                        <option value="typewriter">经典打字机 (Typewriter)</option>
-                        <option value="magazine">健身杂志 (Magazine)</option>
-                        <option value="cyberpunk">赛博朋克 (Cyberpunk)</option>
-                        <option value="minimalist">极简主义 (Minimalist)</option>
-                        <option value="poster">健身海报 (Poster)</option>
-                    </select>
                 </div>
                 <div class="form-group">
                     <label for="api-model">选择模型 (Model):</label>
@@ -48,6 +50,25 @@
                     <p class="hint">如果遇到配额限制 (Quota Exceeded)，请尝试切换模型。</p>
                     <p class="hint" style="color: #d32f2f; font-size: 0.8rem; margin-top: 5px;">注意：API Key 的配额与 AI Studio 网页版是分开计算的。Experimental 模型 (如 Latest) 通常配额较低。</p>
                 </div>
+                <div class="form-group">
+                    <label for="api-style">选择风格 (Style):</label>
+                    <select id="api-style">
+                        <option value="typewriter">经典打字机 (Typewriter)</option>
+                        <option value="magazine">健身杂志 (Magazine)</option>
+                        <option value="cyberpunk">赛博朋克 (Cyberpunk)</option>
+                        <option value="minimalist">极简主义 (Minimalist)</option>
+                        <option value="poster">健身海报 (Poster)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="api-ratio">内容比例 (Aspect Ratio):</label>
+                    <select id="api-ratio">
+                        <option value="poster">2:3 (电影海报/默认)</option>
+                        <option value="a4">1:1.41 (A4 文档)</option>
+                        <option value="square">1:1 (社交媒体方形)</option>
+                        <option value="auto">自动 (自适应内容)</option>
+                    </select>
+                </div>
                 <button id="save-settings" class="btn-primary">保存设置</button>
             </div>
         </div>
@@ -58,24 +79,24 @@
                 <form id="gym-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label>性别:</label>
+                            <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> 性别:</label>
                             <select id="gender" required>
                                 <option value="男">男</option>
                                 <option value="女">女</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>身高 (cm):</label>
+                            <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M2 12h20"></path><path d="M12 2v20"></path></svg> 身高 (cm):</label>
                             <input type="number" id="height" required>
                         </div>
                         <div class="form-group">
-                            <label>体重 (kg):</label>
+                            <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> 体重 (kg):</label>
                             <input type="number" id="weight" required>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>体型描述:</label>
+                        <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M6 9l6 6 6-6"></path></svg> 体型描述:</label>
                         <select id="body-type" required>
                             <option value="偏瘦">偏瘦</option>
                             <option value="正常">正常</option>
@@ -84,17 +105,17 @@
                     </div>
 
                     <div class="form-group">
-                        <label>训练经验:</label>
+                        <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg> 训练经验:</label>
                         <input type="text" id="experience" placeholder="例如：可做10个俯卧撑，0个引体" required>
                     </div>
 
                     <div class="form-group">
-                        <label>现有器械:</label>
+                        <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg> 现有器械:</label>
                         <input type="text" id="equipment" placeholder="例如：无器械，只有瑜伽垫，有哑铃" required>
                     </div>
 
                     <div class="form-group">
-                        <label>目标:</label>
+                        <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> 目标:</label>
                         <input type="text" id="goal" placeholder="例如：胸肌变厚、腹肌更饱满" required>
                     </div>
 

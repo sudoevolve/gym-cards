@@ -178,6 +178,9 @@ button:active {
     position: relative;
     overflow: hidden;
     transition: all 0.3s;
+    /* Flex layout to push footer to bottom */
+    display: flex;
+    flex-direction: column;
 }
 
 /* Add paper texture via CSS pattern - Typewriter Only */
@@ -205,6 +208,7 @@ body[data-style="typewriter"] .paper-sheet::before {
     margin-bottom: 20px;
     position: relative;
     z-index: 1;
+    flex-shrink: 0; /* Don't shrink header */
 }
 
 .timestamp {
@@ -222,10 +226,12 @@ body[data-style="typewriter"] .paper-sheet::before {
     white-space: pre-wrap;
     position: relative;
     z-index: 1;
-    min-height: 300px;
-    max-height: 55vh;
-    overflow-y: auto;
+    /* Removed fixed height/scroll to match export and push footer down */
+    /* min-height: 300px; Removed to let flex handle it */
+    /* max-height: 55vh; Removed for WYSIWYG */
+    /* overflow-y: auto; Removed */
     word-break: break-word;
+    flex: 1; /* Occupy remaining space */
 }
 
 /* Ensure output-text is inline during typing, but block for markdown */
@@ -258,9 +264,24 @@ body[data-style="typewriter"] .paper-sheet::before {
     color: #666;
     margin-bottom: 1em;
 }
-.typewriter-content table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
-.typewriter-content th, .typewriter-content td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-.typewriter-content th { background-color: #f2f2f2; font-weight: bold; }
+/* Typewriter Table Styling */
+.typewriter-content table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-bottom: 1.5em; 
+}
+.typewriter-content th, .typewriter-content td { 
+    border: 1px dashed #666; 
+    padding: 10px; 
+    text-align: left; 
+    font-family: 'Courier Prime', monospace;
+}
+.typewriter-content th { 
+    background-color: transparent; 
+    border-bottom: 2px solid #333; 
+    font-weight: bold;
+    text-transform: uppercase;
+}
 
 .paper-footer {
     margin-top: 30px;
@@ -296,18 +317,34 @@ body[data-style="typewriter"] .paper-sheet::before {
    STYLE VARIATIONS
    ========================================= */
 
+/* Aspect Ratio & Width Control */
+body[data-ratio="poster"] .container { max-width: 550px; }
+body[data-ratio="poster"] .paper-sheet { min-height: 800px; } /* Ensure vertical feel */
+
+body[data-ratio="a4"] .container { max-width: 650px; }
+body[data-ratio="a4"] .paper-sheet { min-height: 900px; }
+
+body[data-ratio="square"] .container { max-width: 600px; }
+body[data-ratio="square"] .paper-sheet { min-height: 600px; }
+
+body[data-ratio="auto"] .container { max-width: 800px; }
+
 /* --- MAGAZINE STYLE --- */
 body[data-style="magazine"] {
+    color-scheme: light;
     background-color: #f0f2f5;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 body[data-style="magazine"] .container {
-    max-width: 900px;
+    /* max-width controlled by data-ratio, but default to narrower if ratio not set */
     border: none;
     box-shadow: 0 20px 40px rgba(0,0,0,0.15);
     background-color: #fff;
 }
+
+/* Ensure magazine style respects the ratio width, override specific if needed */
+body[data-style="magazine"][data-ratio="auto"] .container { max-width: 800px; }
 
 body[data-style="magazine"] header {
     border-bottom: 4px solid #000;
@@ -387,21 +424,22 @@ body[data-style="magazine"] .typewriter-content {
     line-height: 1.8;
     color: #2c3e50;
     padding: 0 20px;
-    /* Simulate multi-column layout for wider screens */
+    /* Removed multi-column layout to fix "horizontal" complaint */
     column-count: 1; 
 }
 
-@media (min-width: 768px) {
-    body[data-style="magazine"] .typewriter-content {
+/* Optional: Only enable multi-column if user explicitly wants wide layout (e.g. auto ratio on very large screens) */
+@media (min-width: 1024px) {
+    body[data-style="magazine"][data-ratio="auto"] .typewriter-content {
         column-count: 2;
         column-gap: 40px;
         column-rule: 1px solid #eee;
     }
-    /* Titles span all columns */
-    body[data-style="magazine"] .typewriter-content h1,
-    body[data-style="magazine"] .typewriter-content h2 {
+    /* Titles span all columns only in this specific case */
+    body[data-style="magazine"][data-ratio="auto"] .typewriter-content h1,
+    body[data-style="magazine"][data-ratio="auto"] .typewriter-content h2 {
         column-span: all;
-        margin-top: 0.5em; /* Reset top margin since it breaks flow less */
+        margin-top: 0.5em; 
     }
 }
 
@@ -444,6 +482,7 @@ body[data-style="magazine"] .paper-footer {
 
 /* --- CYBERPUNK STYLE --- */
 body[data-style="cyberpunk"] {
+    color-scheme: dark;
     background-color: #050505;
     color: #00f3ff;
     font-family: 'Courier New', monospace;
@@ -515,6 +554,7 @@ body[data-style="cyberpunk"] .cursor {
 
 /* --- MINIMALIST STYLE --- */
 body[data-style="minimalist"] {
+    color-scheme: light;
     background-color: #fafafa;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #444;
@@ -599,6 +639,7 @@ body[data-style="minimalist"] .typewriter-content h2 {
 
 /* --- POSTER STYLE --- */
 body[data-style="poster"] {
+    color-scheme: dark;
     background-color: #111;
     font-family: 'Oswald', 'Impact', sans-serif;
     color: #eee;
@@ -608,8 +649,11 @@ body[data-style="poster"] .container {
     background-color: transparent;
     border: none;
     box-shadow: none;
-    max-width: 600px;
+    /* Max-width handled by data-ratio, default is poster (550px) */
 }
+
+/* If ratio is auto, keep poster style somewhat narrow still, as it's a poster */
+body[data-style="poster"][data-ratio="auto"] .container { max-width: 600px; }
 
 body[data-style="poster"] .input-section {
     background: #222;
@@ -763,6 +807,166 @@ body[data-style="poster"] .paper-footer {
     border-top: none;
 }
 
+/* Poster Table & List Styling - Enhanced for Readability & Uniqueness */
+body[data-style="poster"] .typewriter-content table {
+    border-color: rgba(255, 255, 255, 0.2);
+    margin-top: 1.5em;
+    font-family: 'Helvetica Neue', sans-serif;
+    border-collapse: separate;
+    border-spacing: 0 5px; /* Separate rows */
+}
+
+body[data-style="poster"] .typewriter-content th,
+body[data-style="poster"] .typewriter-content td {
+    border: none;
+    padding: 15px;
+    background-color: rgba(30, 30, 30, 0.8); /* Dark semi-transparent bg */
+    color: #eee;
+}
+
+body[data-style="poster"] .typewriter-content th {
+    background-color: #ffcc00; /* Yellow Header Background */
+    color: #000; /* Black Text */
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+body[data-style="poster"] .typewriter-content tr:nth-child(even) td {
+    background-color: rgba(50, 50, 50, 0.8);
+}
+
+body[data-style="poster"] .typewriter-content ul, 
+body[data-style="poster"] .typewriter-content ol {
+    padding-left: 1.5em;
+    list-style-type: none; /* Custom markers */
+}
+
+body[data-style="poster"] .typewriter-content li {
+    margin-bottom: 0.8em;
+    position: relative;
+    padding-left: 1.2em;
+}
+
+body[data-style="poster"] .typewriter-content li::before {
+    content: "■";
+    color: #ffcc00;
+    position: absolute;
+    left: 0;
+    font-size: 0.8em;
+    top: 0.2em;
+}
+
+/* --- MAGAZINE STYLE CONTENT LAYOUT --- */
+body[data-style="magazine"] .typewriter-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Georgia', serif;
+    margin: 2em 0;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+}
+
+body[data-style="magazine"] .typewriter-content th {
+    background-color: #fff;
+    color: #000;
+    font-family: 'Impact', sans-serif;
+    text-transform: uppercase;
+    font-size: 1.2em;
+    padding: 10px;
+    border: none; /* Reset base border */
+    border-bottom: 1px solid #000;
+    text-align: left;
+}
+
+body[data-style="magazine"] .typewriter-content td {
+    padding: 10px;
+    border: none; /* Reset base border */
+    border-bottom: 1px solid #ddd;
+    font-style: italic;
+}
+
+body[data-style="magazine"] .typewriter-content tr:last-child td {
+    border-bottom: none;
+}
+
+body[data-style="magazine"] .typewriter-content ul li::marker {
+    color: #e74c3c;
+    font-size: 1.2em;
+}
+
+/* --- CYBERPUNK STYLE CONTENT LAYOUT --- */
+body[data-style="cyberpunk"] .typewriter-content table {
+    border: 1px solid #00f3ff;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    font-family: 'Courier New', monospace;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+body[data-style="cyberpunk"] .typewriter-content th {
+    background-color: rgba(0, 243, 255, 0.1);
+    color: #00f3ff;
+    text-shadow: 0 0 5px #00f3ff;
+    border: 1px solid #00f3ff;
+    padding: 10px;
+}
+
+body[data-style="cyberpunk"] .typewriter-content td {
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    color: #00f3ff;
+    padding: 10px;
+}
+
+body[data-style="cyberpunk"] .typewriter-content li::marker {
+    content: "> ";
+    color: #ff00ff;
+    text-shadow: 0 0 5px #ff00ff;
+}
+
+/* --- MINIMALIST STYLE CONTENT LAYOUT --- */
+body[data-style="minimalist"] .typewriter-content table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body[data-style="minimalist"] .typewriter-content th {
+    background-color: transparent;
+    color: #999;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 1px;
+    border: none; /* Reset base border */
+    border-bottom: 1px solid #eee;
+    padding: 15px 0;
+    text-align: left;
+}
+
+body[data-style="minimalist"] .typewriter-content td {
+    border: none; /* Reset base border */
+    border-bottom: 1px solid #f5f5f5;
+    padding: 15px 0;
+    color: #333;
+}
+
+body[data-style="minimalist"] .typewriter-content ul,
+body[data-style="minimalist"] .typewriter-content ol {
+    padding-left: 0;
+    list-style-position: inside;
+}
+
+body[data-style="minimalist"] .typewriter-content li {
+    margin-bottom: 0.5em;
+    color: #555;
+}
+
+body[data-style="minimalist"] .typewriter-content li::marker {
+    color: #ccc;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
     .form-row {
@@ -787,4 +991,88 @@ body[data-style="poster"] .paper-footer {
 
 @keyframes fadeIn {
     to { opacity: 1; }
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    color: #fff;
+    font-family: 'Courier Prime', monospace;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.toast {
+    background-color: #333;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideDown 0.3s ease-out forwards;
+    border-left: 4px solid #fff;
+    font-size: 0.9rem;
+}
+
+.toast.success { border-left-color: #4caf50; }
+.toast.error { border-left-color: #f44336; }
+.toast.info { border-left-color: #2196f3; }
+
+@keyframes slideDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-10px); }
 }

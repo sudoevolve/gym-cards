@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeyInput = document.getElementById('api-key');
     const apiStyleSelect = document.getElementById('api-style');
     const apiModelSelect = document.getElementById('api-model');
+    const apiRatioSelect = document.getElementById('api-ratio');
     const customModelInput = document.getElementById('custom-model-input');
     const outputSection = document.getElementById('typewriter-output');
     const outputTextEl = document.getElementById('output-text');
@@ -21,11 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearBtn = document.getElementById('clear-btn');
     const outputActions = document.getElementById('output-actions');
     const currentDateSpan = document.getElementById('current-date');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const toastContainer = document.getElementById('toast-container');
 
     // State
     let apiKey = localStorage.getItem('gemini_api_key') || '';
     let apiStyle = localStorage.getItem('gemini_api_style') || 'typewriter';
     let apiModel = localStorage.getItem('gemini_api_model') || 'gemini-2.5-flash';
+    let apiRatio = localStorage.getItem('gemini_api_ratio') || 'poster';
     let isTyping = false;
     let typingInterval;
     let requestInFlight = false;
@@ -80,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
 - 常见瘦人增肌误区
 
 6️⃣ 输出格式要求
+- 核心数据尽量使用 Markdown 表格展示，例如：
+  - 训练计划：动作 | 组数 | 次数 | 休息 | 注意事项
+  - 饮食计划：餐别 | 食物 | 蛋白质 | 热量
 - 用清晰分段结构
 - 用可直接执行的具体数字
 - 不要泛泛而谈
@@ -96,6 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apiStyle) {
         apiStyleSelect.value = apiStyle;
         document.body.setAttribute('data-style', apiStyle);
+    }
+    if (apiRatio) {
+        apiRatioSelect.value = apiRatio;
+        document.body.setAttribute('data-ratio', apiRatio);
     }
     if (apiModel) {
         // Check if the saved model is in the dropdown list
@@ -138,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSettingsBtn.addEventListener('click', () => {
         const key = apiKeyInput.value.trim();
         const style = apiStyleSelect.value;
+        const ratio = apiRatioSelect.value;
         let model = apiModelSelect.value;
         
         if (model === 'custom') {
@@ -155,11 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('gemini_api_style', apiStyle);
                 document.body.setAttribute('data-style', apiStyle);
             }
+            if (ratio) {
+                apiRatio = ratio;
+                localStorage.setItem('gemini_api_ratio', apiRatio);
+                document.body.setAttribute('data-ratio', apiRatio);
+            }
             localStorage.setItem('gemini_api_key', apiKey);
-            alert(`设置已保存！\n当前模型: ${apiModel}\n当前风格: ${apiStyle}`);
+            showToast(`设置已保存！\n模型: ${apiModel}\n风格: ${apiStyle}\n比例: ${apiRatio}`, 'success');
             settingsModal.classList.add('hidden');
         } else {
-            alert('请输入有效的 API Key');
+            showToast('请输入有效的 API Key', 'error');
         }
     });
 
@@ -167,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         if (!apiKey) {
-            alert('请先在设置中配置 Google Gemini API Key');
+            showToast('请先在设置中配置 Google Gemini API Key', 'warning');
             settingsModal.classList.remove('hidden');
             return;
         }
@@ -192,15 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     downloadBtn.addEventListener('click', () => {
         const element = document.getElementById('card-preview');
-        const outputContent = document.getElementById('typewriter-output');
         
-        // Temporarily expand content to full height for capture
-        const originalMaxHeight = outputContent.style.maxHeight;
-        const originalOverflow = outputContent.style.overflow;
-        
-        outputContent.style.maxHeight = 'none';
-        outputContent.style.overflow = 'visible';
-
         // Temporarily remove shadow and margin for cleaner export
         const originalBoxShadow = element.style.boxShadow;
         const originalMargin = element.style.margin;
@@ -212,7 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
             backgroundColor: null, // Use element's background
             useCORS: true,
             height: element.scrollHeight, // Ensure full height capture
-            windowHeight: element.scrollHeight + 100 // Add buffer
+            onclone: (clonedDoc) => {
+                // Ensure the cloned body has the same data attributes for CSS selectors to work
+                const currentStyle = document.body.getAttribute('data-style');
+                const currentRatio = document.body.getAttribute('data-ratio');
+                if (currentStyle) clonedDoc.body.setAttribute('data-style', currentStyle);
+                if (currentRatio) clonedDoc.body.setAttribute('data-ratio', currentRatio);
+            }
         }).then(canvas => {
             const link = document.createElement('a');
             link.download = `GymCard_${new Date().getTime()}.png`;
@@ -222,15 +237,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Restore styles
             element.style.boxShadow = originalBoxShadow;
             element.style.margin = originalMargin;
-            outputContent.style.maxHeight = originalMaxHeight;
-            outputContent.style.overflow = originalOverflow;
+            showToast('图片导出成功', 'success');
         }).catch(err => {
             console.error('Export failed:', err);
             // Restore styles on error too
             element.style.boxShadow = originalBoxShadow;
             element.style.margin = originalMargin;
-            outputContent.style.maxHeight = originalMaxHeight;
-            outputContent.style.overflow = originalOverflow;
+            showToast('导出失败，请重试', 'error');
         });
     });
 
@@ -253,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await navigator.clipboard.writeText(text);
+            showToast('已复制到剪贴板', 'success');
         } catch (_) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -263,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
+            showToast('已复制到剪贴板', 'success');
         }
     });
 
@@ -287,10 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastRequestAt = nowMs;
 
         // Show loading state
-        outputTextEl.textContent = '\n> 读取用户信息...\n> 计算训练与饮食参数...\n> 生成增肌方案...';
-        lastOutputText = outputTextEl.textContent;
-        generateBtn.disabled = true;
-        generateBtn.textContent = '正在计算...';
+        showLoading();
         requestInFlight = true;
 
         const prompt = promptTemplate
@@ -362,9 +374,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             typeWriter(`> SYSTEM ERROR: \n > ${errorMessage}`);
+            showToast('生成失败，请检查设置或网络', 'error');
         } finally {
-            generateBtn.disabled = false;
-            generateBtn.textContent = '生成计划 [ENTER]';
+            hideLoading();
             requestInFlight = false;
         }
     }
@@ -411,5 +423,64 @@ document.addEventListener('DOMContentLoaded', () => {
             i = next;
             outputSection.scrollTop = outputSection.scrollHeight;
         }, intervalMs);
+    }
+
+    // Helper Functions
+    function showLoading() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('hidden');
+        }
+    }
+
+    function hideLoading() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('hidden');
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        if (!toastContainer) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        // Icon SVG based on type
+        let iconSvg = '';
+        let color = '#2196f3'; // info blue
+        
+        if (type === 'success') {
+            color = '#4caf50'; // green
+            iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+        } else if (type === 'error') {
+            color = '#f44336'; // red
+            iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+        } else if (type === 'warning') {
+            color = '#ff9800'; // orange
+            iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+        } else {
+            iconSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+        }
+
+        toast.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                ${iconSvg}
+                <span>${message}</span>
+            </div>
+            <div style="cursor: pointer; margin-left: 10px; opacity: 0.7;" onclick="this.parentElement.remove()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        // Auto remove
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.animation = 'fadeOut 0.3s forwards';
+                toast.addEventListener('animationend', () => {
+                    if (toast.parentElement) toast.remove();
+                });
+            }
+        }, 3000);
     }
 });
