@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "https://esm.run/@google/genai";
+import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
@@ -8,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.querySelector('.close-modal');
     const saveSettingsBtn = document.getElementById('save-settings');
     const apiKeyInput = document.getElementById('api-key');
+    const apiStyleSelect = document.getElementById('api-style');
     const apiModelSelect = document.getElementById('api-model');
     const customModelInput = document.getElementById('custom-model-input');
     const outputSection = document.getElementById('typewriter-output');
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // State
     let apiKey = localStorage.getItem('gemini_api_key') || '';
+    let apiStyle = localStorage.getItem('gemini_api_style') || 'typewriter';
     let apiModel = localStorage.getItem('gemini_api_model') || 'gemini-2.5-flash';
     let isTyping = false;
     let typingInterval;
@@ -90,6 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apiKey) {
         apiKeyInput.value = apiKey;
     }
+    if (apiStyle) {
+        apiStyleSelect.value = apiStyle;
+        document.body.setAttribute('data-style', apiStyle);
+    }
     if (apiModel) {
         // Check if the saved model is in the dropdown list
         const optionExists = Array.from(apiModelSelect.options).some(option => option.value === apiModel);
@@ -130,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveSettingsBtn.addEventListener('click', () => {
         const key = apiKeyInput.value.trim();
+        const style = apiStyleSelect.value;
         let model = apiModelSelect.value;
         
         if (model === 'custom') {
@@ -142,8 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 apiModel = model;
                 localStorage.setItem('gemini_api_model', apiModel);
             }
+            if (style) {
+                apiStyle = style;
+                localStorage.setItem('gemini_api_style', apiStyle);
+                document.body.setAttribute('data-style', apiStyle);
+            }
             localStorage.setItem('gemini_api_key', apiKey);
-            alert(`设置已保存！\n当前模型: ${apiModel}`);
+            alert(`设置已保存！\n当前模型: ${apiModel}\n当前风格: ${apiStyle}`);
             settingsModal.classList.add('hidden');
         } else {
             alert('请输入有效的 API Key');
@@ -179,7 +192,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     downloadBtn.addEventListener('click', () => {
         const element = document.getElementById('card-preview');
+        const outputContent = document.getElementById('typewriter-output');
         
+        // Temporarily expand content to full height for capture
+        const originalMaxHeight = outputContent.style.maxHeight;
+        const originalOverflow = outputContent.style.overflow;
+        
+        outputContent.style.maxHeight = 'none';
+        outputContent.style.overflow = 'visible';
+
         // Temporarily remove shadow and margin for cleaner export
         const originalBoxShadow = element.style.boxShadow;
         const originalMargin = element.style.margin;
@@ -188,8 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         html2canvas(element, {
             scale: 2, // Higher quality
-            backgroundColor: '#fff',
-            useCORS: true
+            backgroundColor: null, // Use element's background
+            useCORS: true,
+            height: element.scrollHeight, // Ensure full height capture
+            windowHeight: element.scrollHeight + 100 // Add buffer
         }).then(canvas => {
             const link = document.createElement('a');
             link.download = `GymCard_${new Date().getTime()}.png`;
@@ -199,6 +222,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Restore styles
             element.style.boxShadow = originalBoxShadow;
             element.style.margin = originalMargin;
+            outputContent.style.maxHeight = originalMaxHeight;
+            outputContent.style.overflow = originalOverflow;
+        }).catch(err => {
+            console.error('Export failed:', err);
+            // Restore styles on error too
+            element.style.boxShadow = originalBoxShadow;
+            element.style.margin = originalMargin;
+            outputContent.style.maxHeight = originalMaxHeight;
+            outputContent.style.overflow = originalOverflow;
         });
     });
 
@@ -274,10 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const responseText = await callGeminiAPI(prompt);
             const normalized = String(responseText ?? '').trim();
-            const maxChars = 1800;
-            const finalText = normalized.length > maxChars
-                ? `${normalized.slice(0, maxChars)}\n...\n[内容过长已截断]`
-                : normalized;
+            // Remove truncation limit
+            const finalText = normalized;
+            
             typeWriter(finalText);
             outputActions.classList.remove('hidden');
 
@@ -351,7 +382,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isTyping = true;
         lastOutputText = text;
         outputTextEl.textContent = '';
-
+        outputTextEl.style.display = 'inline'; // Reset to inline for typing
+        outputTextEl.style.whiteSpace = 'pre-wrap'; // Preserve whitespace for typing
+        
         let i = 0;
         const len = text.length;
         const intervalMs = 16;
@@ -361,6 +394,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (i >= len) {
                 clearInterval(typingInterval);
                 isTyping = false;
+                // Final render: Convert Markdown to HTML
+                try {
+                    outputTextEl.innerHTML = marked.parse(text);
+                    outputTextEl.style.display = 'block'; // Switch to block for HTML content
+                    outputTextEl.style.whiteSpace = 'normal'; // Standard HTML spacing
+                } catch (e) {
+                    console.error('Markdown parsing error:', e);
+                    outputTextEl.textContent = text;
+                }
                 return;
             }
 
